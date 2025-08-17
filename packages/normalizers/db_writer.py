@@ -1,12 +1,15 @@
 import os
-from sqlalchemy import create_engine, text, bindparam
-from sqlalchemy.dialects.postgresql import JSONB
-from dotenv import load_dotenv
+
 from common.pol_schemas import Envelope
+from dotenv import load_dotenv
+from sqlalchemy import bindparam, create_engine, text
+from sqlalchemy.dialects.postgresql import JSONB
+
 load_dotenv()
 
 DB_URL = f"postgresql+psycopg://postgres:{os.getenv('POSTGRES_PASSWORD','postgres')}@{os.getenv('POSTGRES_HOST','localhost')}:{os.getenv('POSTGRES_PORT','5432')}/{os.getenv('POSTGRES_DB','pol')}"
 engine = create_engine(DB_URL, pool_pre_ping=True, pool_size=5, max_overflow=5)
+
 
 class TracksWriter:
     def __init__(self, table: str):
@@ -61,15 +64,18 @@ class AnomaliesWriter:
 
     def write(self, anomaly: dict):
         with engine.begin() as conn:
-            conn.execute(self.stmt, {
-                "ts": anomaly["ts"],
-                "domain": anomaly.get("domain"),
-                "entity_id": anomaly.get("entity_id"),
-                "h3": anomaly.get("h3"),
-                "type": anomaly.get("type"),
-                "score": anomaly.get("score"),
-                "evidence": json_dumps(anomaly.get("evidence", {})),
-            })
+            conn.execute(
+                self.stmt,
+                {
+                    "ts": anomaly["ts"],
+                    "domain": anomaly.get("domain"),
+                    "entity_id": anomaly.get("entity_id"),
+                    "h3": anomaly.get("h3"),
+                    "type": anomaly.get("type"),
+                    "score": anomaly.get("score"),
+                    "evidence": json_dumps(anomaly.get("evidence", {})),
+                },
+            )
 
 
 class FusedWriter:
@@ -84,15 +90,19 @@ class FusedWriter:
 
     def write(self, fused: dict):
         with engine.begin() as conn:
-            conn.execute(self.stmt, {
-                "ts": fused["ts"],
-                "cluster_id": fused.get("cluster_id"),
-                "types": fused.get("types", []),
-                "h3_center": fused.get("h3_center"),
-                "entities": fused.get("entities", []),
-                "confidence": fused.get("confidence", 0.5),
-                "evidence_links": fused.get("evidence_links", []),
-            })
+            conn.execute(
+                self.stmt,
+                {
+                    "ts": fused["ts"],
+                    "cluster_id": fused.get("cluster_id"),
+                    "types": fused.get("types", []),
+                    "h3_center": fused.get("h3_center"),
+                    "entities": fused.get("entities", []),
+                    "confidence": fused.get("confidence", 0.5),
+                    "evidence_links": fused.get("evidence_links", []),
+                },
+            )
+
 
 def json_dumps(d):  # already a dict; return as-is for JSONB binding
     return d

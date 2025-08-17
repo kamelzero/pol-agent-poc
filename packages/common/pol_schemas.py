@@ -1,4 +1,3 @@
-
 from pydantic import BaseModel, Field
 
 
@@ -15,14 +14,16 @@ class Envelope(BaseModel):
     attrs: dict = Field(default_factory=dict)
     h3: str | None = None
 
+
 class DomainAnomaly(BaseModel):
     ts: str
     domain: str  # "maritime" | "air" | "ground"
     entity_id: str
     h3: str
-    type: str    # "loiter" | "rendezvous" | "holding" | "convoy" | "dark_gap" | ...
+    type: str  # "loiter" | "rendezvous" | "holding" | "convoy" | "dark_gap" | ...
     score: float
     evidence: dict
+
 
 class FusedAnomaly(BaseModel):
     ts: str

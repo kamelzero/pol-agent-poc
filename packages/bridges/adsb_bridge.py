@@ -11,6 +11,7 @@ random.seed(1337)
 H3_RES = int(os.getenv("H3_RES", "8"))
 TOPIC = "adsb.raw"
 
+
 def simulate_aircraft(icao: str, lat: float, lon: float, kts: float, heading: float, alt_ft: float):
     while True:
         if random.random() < 0.05:
@@ -26,21 +27,33 @@ def simulate_aircraft(icao: str, lat: float, lon: float, kts: float, heading: fl
         lon += dlon
         yield icao, lat, lon, kts, heading, alt_ft
 
+
 def main():
     p = producer()
-    seeds = [(f"ICAO{i:06X}", 34.3 + i*0.02, -118.9 - i*0.02, 220.0, 90.0, 12000+ i*500) for i in range(5)]
+    seeds = [
+        (f"ICAO{i:06X}", 34.3 + i * 0.02, -118.9 - i * 0.02, 220.0, 90.0, 12000 + i * 500)
+        for i in range(5)
+    ]
     gens = [simulate_aircraft(*s) for s in seeds]
     while True:
         for g in gens:
             icao, lat, lon, spd, hdg, alt = next(g)
             msg = Envelope(
-                scenario_id=SCENARIO_ID, source="adsb", ts=ts_now(),
-                entity_id=icao, lat=lat, lon=lon, speed=spd, course=hdg, alt=alt,
-                attrs={"aircraft":"A320"},
-                h3=latlon_to_h3(lat, lon, H3_RES)
+                scenario_id=SCENARIO_ID,
+                source="adsb",
+                ts=ts_now(),
+                entity_id=icao,
+                lat=lat,
+                lon=lon,
+                speed=spd,
+                course=hdg,
+                alt=alt,
+                attrs={"aircraft": "A320"},
+                h3=latlon_to_h3(lat, lon, H3_RES),
             ).model_dump()
             p.send(TOPIC, msg)
         time.sleep(1)
+
 
 if __name__ == "__main__":
     main()

@@ -12,9 +12,12 @@ load_dotenv()
 BROKER = os.getenv("KAFKA_BROKER", "localhost:29092")
 SCENARIO_ID = os.getenv("SCENARIO_ID", "demo-aug16")
 
+
 def ts_now():
     return datetime.now(UTC).isoformat()
 
+
 def producer():
-    return KafkaProducer(bootstrap_servers=BROKER,
-                         value_serializer=lambda v: json.dumps(v).encode("utf-8"))
+    return KafkaProducer(
+        bootstrap_servers=BROKER, value_serializer=lambda v: json.dumps(v).encode("utf-8")
+    )

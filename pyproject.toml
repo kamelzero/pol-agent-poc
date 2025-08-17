@@ -23,11 +23,15 @@ dependencies = [
 ]
 
 [tool.black]
-line-length = 100
+line-length = 120
 
 [tool.ruff]
-line-length = 100
+line-length = 120
+
+[tool.ruff.lint]
 select = ["E","F","I","UP","B","C4","SIM"]
+# Delegate line length to Black to avoid duplicate failures
+ignore = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"

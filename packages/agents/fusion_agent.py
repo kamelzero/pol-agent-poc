@@ -6,7 +6,6 @@ from datetime import UTC, datetime, timedelta
 from kafka import KafkaConsumer, KafkaProducer
 from normalizers.db_writer import FusedWriter
 
-
 IN_TOPIC = "pol.anomalies.domain"
 OUT_TOPIC = "pol.anomalies.fused"
 
@@ -83,5 +82,3 @@ def fusion_agent():
 
 if __name__ == "__main__":
     fusion_agent()
-
-

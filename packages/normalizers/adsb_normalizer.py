@@ -4,6 +4,7 @@ from normalizers.norm_base import make_consumer, make_producer
 
 IN_TOPIC, OUT_TOPIC = "adsb.raw", "adsb.norm"
 
+
 def main():
     c = make_consumer(IN_TOPIC)
     p = make_producer()
@@ -12,6 +13,7 @@ def main():
         env = Envelope(**msg.value)
         p.send(OUT_TOPIC, env.model_dump())
         writer.write_envelope(env)
+
 
 if __name__ == "__main__":
     main()

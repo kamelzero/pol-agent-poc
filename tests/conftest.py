@@ -10,5 +10,3 @@ def _ensure_packages_on_path() -> None:
 
 
 _ensure_packages_on_path()
-
-
