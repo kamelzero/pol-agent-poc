@@ -31,6 +31,29 @@ See spec in repo and README sections; packages contain common schemas, bridges, 
   - `packages/agents/fusion_agent.py`: `pol.anomalies.domain` → cluster by H3+minute → publish `pol.anomalies.fused` and write `anomalies_fused`
 - LLM explainer (optional)
   - `packages/agents/explainer_agent.py`: `pol.anomalies.domain` → generate summary/triage → publish `pol.anomalies.explained` and write `anomalies_explained`
+
+### LLM explainer configuration
+
+- By default the explainer uses a deterministic fallback (no external calls).
+- To enable OpenAI calls, set these env vars (host shell or Compose):
+  - `OPENAI_API_KEY`: your API key
+  - `LLM_PROVIDER`: `openai` (default)
+  - `LLM_MODEL`: e.g., `gpt-4o-mini` (default)
+  - `LLM_TEMPERATURE`: default `0.2`
+  - `LLM_MAX_TOKENS`: default `256`
+
+Compose already passes `OPENAI_API_KEY` through to `agent-explainer` if set in your environment:
+
+```bash
+export OPENAI_API_KEY=sk-...
+docker compose up -d --build agent-explainer
+```
+
+To smoke test the LLM path (skips if no key):
+
+```bash
+python -m pytest -q -k llm
+```
 - UI (Streamlit) → DB queries
   - `packages/ui/app.py` queries `tracks_*`, `anomalies_*` and visualizes
 

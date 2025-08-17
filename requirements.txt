@@ -19,3 +19,5 @@ pytest
 ruff
 black
 mypy
+tenacity
+openai>=1.0.0

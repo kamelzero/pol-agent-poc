@@ -150,6 +150,8 @@ services:
       POSTGRES_HOST: db
       POSTGRES_PASSWORD: postgres
       LLM_MODEL: fallback
+      LLM_PROVIDER: openai
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on: [kafka]
     command: python packages/agents/explainer_agent.py
     restart: unless-stopped

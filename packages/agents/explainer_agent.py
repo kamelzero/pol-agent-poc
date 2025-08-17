@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from kafka import KafkaConsumer, KafkaProducer
 from normalizers.db_writer import ExplainedWriter
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 IN_TOPIC = "pol.anomalies.domain"
 OUT_TOPIC = "pol.anomalies.explained"
@@ -28,13 +29,46 @@ def _hash(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()[:16]
 
 
-def _call_llm(prompt: str) -> tuple[str, str]:
-    # Placeholder: integrate OpenAI or another provider via env configuration
-    # If OPENAI_API_KEY is set, you could call the API here. For now, deterministic fallback.
-    summary = "Anomaly detected based on provided heuristics."
-    triage = "Log and monitor. If persistent or high-risk, escalate to operator."
-    model = os.getenv("LLM_MODEL", "fallback")
+@retry(wait=wait_exponential(multiplier=0.5, min=0.5, max=8), stop=stop_after_attempt(3))
+def _call_openai(prompt: str, model: str, temperature: float, max_tokens: int) -> tuple[str, str, str]:
+    from openai import OpenAI
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=api_key)
+    sys = (
+        "You are a concise triage assistant. Respond with strict JSON containing keys: "
+        "summary (short sentence), triage (actionable step), confidence (0-1)."
+    )
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": sys},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=temperature,
+        max_tokens=max_tokens,
+        response_format={"type": "json_object"},
+    )
+    content = resp.choices[0].message.content or "{}"
+    try:
+        data = json.loads(content)
+    except Exception:
+        data = {"summary": "Auto-triage", "triage": "Monitor.", "confidence": 0.5}
+    summary = str(data.get("summary", ""))[:400]
+    triage = str(data.get("triage", ""))[:800]
     return summary, triage, model
+
+
+def _call_llm(prompt: str) -> tuple[str, str, str]:
+    provider = os.getenv("LLM_PROVIDER", "openai").lower()
+    model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    temperature = float(os.getenv("LLM_TEMPERATURE", "0.2"))
+    max_tokens = int(os.getenv("LLM_MAX_TOKENS", "256"))
+    if provider == "openai" and os.getenv("OPENAI_API_KEY"):
+        return _call_openai(prompt, model, temperature, max_tokens)
+    summary = "Heuristic anomaly; likely benign unless persistent."
+    triage = "Monitor for persistence; escalate if repeated or near sensitive zones."
+    return summary, triage, "fallback"
 
 
 def explainer_agent():
