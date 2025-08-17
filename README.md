@@ -5,12 +5,10 @@ Goal: Multi-agent PoL demo for AIS/ADS-B/Ground with Kafka+TimescaleDB, agents, 
 ## Quickstart
 
 1. Copy `.env.example` to `.env` and adjust as needed.
-2. Start infra: `docker compose up -d`
+2. Start infra only: `docker compose up -d zookeeper kafka db`
 3. Initialize DB schema: `make db-init`
-4. In one terminal: `make bridges`
-5. In another: `make norms`
-6. In another: `make agents`
-7. Launch UI: `make ui`
+4. Start everything in containers (bridges, normalizers, agents, UI): `docker compose up -d --build`
+5. UI is at http://localhost:8501
 
 ## Layout
 See spec in repo and README sections; packages contain common schemas, bridges, normalizers, agents, and UI.
@@ -31,6 +29,8 @@ See spec in repo and README sections; packages contain common schemas, bridges, 
   - `packages/agents/ground_agent.py`: `ground.norm` → detect convoy → publish `pol.anomalies.domain` and write `anomalies_domain`
 - Fusion agent (Kafka consumer) → fused anomalies
   - `packages/agents/fusion_agent.py`: `pol.anomalies.domain` → cluster by H3+minute → publish `pol.anomalies.fused` and write `anomalies_fused`
+- LLM explainer (optional)
+  - `packages/agents/explainer_agent.py`: `pol.anomalies.domain` → generate summary/triage → publish `pol.anomalies.explained` and write `anomalies_explained`
 - UI (Streamlit) → DB queries
   - `packages/ui/app.py` queries `tracks_*`, `anomalies_*` and visualizes
 
@@ -40,6 +40,7 @@ See spec in repo and README sections; packages contain common schemas, bridges, 
 - Normalized: `ais.norm`, `adsb.norm`, `ground.norm`
 - Domain anomalies: `pol.anomalies.domain`
 - Fused anomalies: `pol.anomalies.fused`
+- Explained anomalies: `pol.anomalies.explained`
 
 ## Monitoring Kafka
 
@@ -133,15 +134,8 @@ PYTHONPATH=packages python -c "from bridges.backfill import backfill_ais; backfi
 
 ```bash
 # Infra
-make up && make db-init
-
-# Start pipelines
-make bridges
-make norms
-make agents
-
-# UI
-make ui
+make up && make db-init   # host-mode
+docker compose up -d      # containerized mode
 
 # Kafka peek (host)
 kcat -b localhost:29092 -t ais.raw -C -o -3 -q
@@ -150,4 +144,5 @@ kcat -b localhost:29092 -t pol.anomalies.domain -C -o -5 -q
 # DB quick checks
 docker compose exec -T db psql -U postgres -d pol -c "SELECT COUNT(*) FROM tracks_ais;"
 docker compose exec -T db psql -U postgres -d pol -c "SELECT ts, domain, type, entity_id, score FROM anomalies_domain ORDER BY ts DESC LIMIT 10;"
+docker compose exec -T db psql -U postgres -d pol -c "SELECT ts, domain, type, summary, triage, model FROM anomalies_explained ORDER BY ts DESC LIMIT 10;"
 ```

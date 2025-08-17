@@ -60,3 +60,18 @@ CREATE TABLE IF NOT EXISTS anomalies_fused(
   evidence_links text[]
 );
 SELECT create_hypertable('anomalies_fused', 'ts', if_not_exists => TRUE);
+
+-- Explained anomalies (LLM triage)
+CREATE TABLE IF NOT EXISTS anomalies_explained(
+  ts timestamptz NOT NULL,
+  domain text,
+  entity_id text,
+  h3 text,
+  type text,
+  score double precision,
+  summary text,
+  triage text,
+  model text,
+  prompt_hash text
+);
+SELECT create_hypertable('anomalies_explained', 'ts', if_not_exists => TRUE);

@@ -50,6 +50,8 @@ def air_agent():
     buf: dict[str, deque] = defaultdict(lambda: deque(maxlen=600))
 
     writer = AnomaliesWriter("anomalies_domain")
+    # Track per-entity holding state to emit only on enter
+    in_holding: dict[str, bool] = {}
 
     while True:
         msg = next(c)
@@ -70,6 +72,7 @@ def air_agent():
         lon_c = sum(e.lon for e in series) / len(series)
         rmax = max(haversine_m(lat_c, lon_c, e.lat, e.lon) for e in series)
         if rmax > MAX_RADIUS_M:
+            in_holding[env.entity_id] = False
             continue
 
         headings = [e.course or 0.0 for e in series]
@@ -77,24 +80,29 @@ def air_agent():
         for i in range(1, len(headings)):
             cum += abs(ang_delta(headings[i], headings[i - 1]))
         if cum < MIN_CUM_HEADING_DEG:
+            in_holding[env.entity_id] = False
             continue
 
-        anomaly = DomainAnomaly(
-            ts=series[-1].ts,
-            domain="air",
-            entity_id=env.entity_id,
-            h3=series[-1].h3,
-            type="holding",
-            score=0.75,
-            evidence={
-                "mean_speed_kts": round(mean_speed, 1),
-                "radius_m": int(rmax),
-                "cum_heading_deg": int(cum),
-            },
-        )
-        doc = anomaly.model_dump()
-        p.send(OUT_TOPIC, doc)
-        writer.write(doc)
+        is_holding = True
+        prev = in_holding.get(env.entity_id, False)
+        if is_holding and not prev:
+            anomaly = DomainAnomaly(
+                ts=series[-1].ts,
+                domain="air",
+                entity_id=env.entity_id,
+                h3=series[-1].h3,
+                type="holding",
+                score=0.75,
+                evidence={
+                    "mean_speed_kts": round(mean_speed, 1),
+                    "radius_m": int(rmax),
+                    "cum_heading_deg": int(cum),
+                },
+            )
+            doc = anomaly.model_dump()
+            p.send(OUT_TOPIC, doc)
+            writer.write(doc)
+        in_holding[env.entity_id] = is_holding
 
 
 if __name__ == "__main__":
