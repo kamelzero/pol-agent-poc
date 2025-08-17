@@ -18,6 +18,4 @@ def ts_now():
 
 
 def producer():
-    return KafkaProducer(
-        bootstrap_servers=BROKER, value_serializer=lambda v: json.dumps(v).encode("utf-8")
-    )
+    return KafkaProducer(bootstrap_servers=BROKER, value_serializer=lambda v: json.dumps(v).encode("utf-8"))

@@ -40,9 +40,7 @@ def maritime_agent():
         auto_offset_reset="latest",
         enable_auto_commit=True,
     )
-    p = KafkaProducer(
-        bootstrap_servers=broker, value_serializer=lambda v: json.dumps(v).encode("utf-8")
-    )
+    p = KafkaProducer(bootstrap_servers=broker, value_serializer=lambda v: json.dumps(v).encode("utf-8"))
 
     buf: dict[str, deque] = defaultdict(lambda: deque(maxlen=600))  # ~10 min @ 1Hz
 

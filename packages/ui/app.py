@@ -13,9 +13,7 @@ st.title("🌊 PoL Agent Demo — Multi-domain")
 with st.sidebar:
     st.header("Filters")
     score_thr = st.slider("Score >=", 0.0, 1.0, 0.6, 0.05)
-    domain_sel = st.multiselect(
-        "Domains", ["maritime", "air", "ground"], default=["maritime", "air", "ground"]
-    )
+    domain_sel = st.multiselect("Domains", ["maritime", "air", "ground"], default=["maritime", "air", "ground"])
     type_sel = st.multiselect(
         "Types",
         ["loiter", "rendezvous", "holding", "convoy"],
@@ -73,9 +71,7 @@ with tabs[1]:
     st.subheader("Domain anomalies (filtered)")
     st.dataframe(dom)
     if not dom.empty:
-        opts = [
-            f"{row.ts} | {row.domain}.{row.type} | {row.entity_id}" for _, row in dom.iterrows()
-        ]
+        opts = [f"{row.ts} | {row.domain}.{row.type} | {row.entity_id}" for _, row in dom.iterrows()]
         choice = st.selectbox("Inspect evidence", opts)
         idx = opts.index(choice) if choice in opts else None
         if idx is not None:

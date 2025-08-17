@@ -45,9 +45,7 @@ def air_agent():
         auto_offset_reset="latest",
         enable_auto_commit=True,
     )
-    p = KafkaProducer(
-        bootstrap_servers=broker, value_serializer=lambda v: json.dumps(v).encode("utf-8")
-    )
+    p = KafkaProducer(bootstrap_servers=broker, value_serializer=lambda v: json.dumps(v).encode("utf-8"))
 
     buf: dict[str, deque] = defaultdict(lambda: deque(maxlen=600))
 
@@ -59,9 +57,7 @@ def air_agent():
         buf[env.entity_id].append(env)
 
         series = [
-            e
-            for e in buf[env.entity_id]
-            if (now_utc() - datetime.fromisoformat(e.ts)).total_seconds() <= WIN_SEC
+            e for e in buf[env.entity_id] if (now_utc() - datetime.fromisoformat(e.ts)).total_seconds() <= WIN_SEC
         ]
         if len(series) < 60:
             continue

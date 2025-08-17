@@ -42,9 +42,7 @@ def ground_agent():
         auto_offset_reset="latest",
         enable_auto_commit=True,
     )
-    p = KafkaProducer(
-        bootstrap_servers=broker, value_serializer=lambda v: json.dumps(v).encode("utf-8")
-    )
+    p = KafkaProducer(bootstrap_servers=broker, value_serializer=lambda v: json.dumps(v).encode("utf-8"))
 
     buf: dict[str, deque] = defaultdict(lambda: deque(maxlen=400))
     last_emit: dict[str, str] = {}
@@ -58,11 +56,7 @@ def ground_agent():
 
         recent_last = {}
         for eid, q in list(buf.items()):
-            series = [
-                e
-                for e in q
-                if (now_utc() - datetime.fromisoformat(e.ts)).total_seconds() <= WIN_SEC
-            ]
+            series = [e for e in q if (now_utc() - datetime.fromisoformat(e.ts)).total_seconds() <= WIN_SEC]
             if series:
                 buf[eid] = deque(series, maxlen=400)
                 recent_last[eid] = series[-1]
@@ -83,10 +77,7 @@ def ground_agent():
                 other = ids[j]
                 a, b = recent_last[seed], recent_last[other]
                 d = haversine_m(a.lat, a.lon, b.lat, b.lon)
-                if (
-                    d <= NEIGHBOR_RADIUS_M
-                    and abs((a.speed or 0.0) - (b.speed or 0.0)) <= MAX_SPEED_DIFF_MPS
-                ):
+                if d <= NEIGHBOR_RADIUS_M and abs((a.speed or 0.0) - (b.speed or 0.0)) <= MAX_SPEED_DIFF_MPS:
                     members.append(other)
             members = sorted(set(members))
             if len(members) >= MIN_GROUP:

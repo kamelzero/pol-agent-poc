@@ -30,10 +30,7 @@ def simulate_aircraft(icao: str, lat: float, lon: float, kts: float, heading: fl
 
 def main():
     p = producer()
-    seeds = [
-        (f"ICAO{i:06X}", 34.3 + i * 0.02, -118.9 - i * 0.02, 220.0, 90.0, 12000 + i * 500)
-        for i in range(5)
-    ]
+    seeds = [(f"ICAO{i:06X}", 34.3 + i * 0.02, -118.9 - i * 0.02, 220.0, 90.0, 12000 + i * 500) for i in range(5)]
     gens = [simulate_aircraft(*s) for s in seeds]
     while True:
         for g in gens:

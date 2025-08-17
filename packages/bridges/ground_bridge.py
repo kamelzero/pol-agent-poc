@@ -21,9 +21,9 @@ def simulate_vehicle(vid: str, lat: float, lon: float, mps: float, heading: floa
         # convert m/s to a small degree delta (~111km per deg)
         meters_per_deg = 111_000
         dlat = (mps / meters_per_deg) * math.cos(math.radians(heading))
-        dlon = (
-            mps / (meters_per_deg * math.cos(math.radians(max(min(lat, 89.9), -89.9))))
-        ) * math.sin(math.radians(heading))
+        dlon = (mps / (meters_per_deg * math.cos(math.radians(max(min(lat, 89.9), -89.9))))) * math.sin(
+            math.radians(heading)
+        )
         lat += dlat
         lon += dlon
         yield vid, lat, lon, mps, heading
@@ -31,10 +31,7 @@ def simulate_vehicle(vid: str, lat: float, lon: float, mps: float, heading: floa
 
 def main():
     p = producer()
-    seeds = [
-        (f"VEH{i:05d}", 34.05 + (i % 3) * 0.01, -118.25 - (i // 3) * 0.01, 8.0, 0.0)
-        for i in range(6)
-    ]
+    seeds = [(f"VEH{i:05d}", 34.05 + (i % 3) * 0.01, -118.25 - (i // 3) * 0.01, 8.0, 0.0) for i in range(6)]
     gens = [simulate_vehicle(*s) for s in seeds]
     while True:
         for g in gens:

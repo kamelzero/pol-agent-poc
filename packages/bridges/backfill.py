@@ -18,9 +18,7 @@ def backfill_ais(minutes: int = 15):
     p = producer()
     now = datetime.now(UTC)
     # 4 normal + 1 loitering slow mover to trigger loiter
-    seeds = [
-        (f"MMSI{100000000 + i}", 34.0 + i * 0.01, -119.0 - i * 0.01, 8.0, 270.0) for i in range(4)
-    ]
+    seeds = [(f"MMSI{100000000 + i}", 34.0 + i * 0.01, -119.0 - i * 0.01, 8.0, 270.0) for i in range(4)]
     seeds.append(("MMSI999999999", 34.25, -119.25, 1.0, 0.0))  # loiter candidate
 
     steps = minutes * 60
@@ -50,8 +48,7 @@ def backfill_ais(minutes: int = 15):
             p.send("ais.raw", msg)
         # update seeds with new state
         seeds = [
-            (m, msg["lat"], msg["lon"], k, h)
-            for (m, _, _, k, h), msg in zip(seeds, [], strict=False)
+            (m, msg["lat"], msg["lon"], k, h) for (m, _, _, k, h), msg in zip(seeds, [], strict=False)
         ]  # placeholder to satisfy structure
 
 
@@ -59,10 +56,7 @@ def backfill_adsb(minutes: int = 10):
     p = producer()
     now = datetime.now(UTC)
     # 4 normal cruisers + 1 holding pattern (low speed ~10 kts with heading wrap)
-    seeds = [
-        (f"ICAO{i:06X}", 34.3 + i * 0.02, -118.9 - i * 0.02, 220.0, 90.0, 12000.0 + i * 500)
-        for i in range(4)
-    ]
+    seeds = [(f"ICAO{i:06X}", 34.3 + i * 0.02, -118.9 - i * 0.02, 220.0, 90.0, 12000.0 + i * 500) for i in range(4)]
     seeds.append(("ICAOHOLD", 34.5, -118.5, 10.0, 0.0, 9000.0))  # holding candidate
 
     steps = minutes * 60
@@ -132,10 +126,9 @@ def backfill_ground(minutes: int = 5):
                     hdg = (hdg + random.choice([90, -90, 0])) % 360
             meters_per_deg = 111_000
             dlat = (mps / meters_per_deg) * math.cos(math.radians(hdg))
-            dlon = (
-                mps
-                / (meters_per_deg * max(0.2, math.cos(math.radians(max(min(lat, 89.9), -89.9)))))
-            ) * math.sin(math.radians(hdg))
+            dlon = (mps / (meters_per_deg * max(0.2, math.cos(math.radians(max(min(lat, 89.9), -89.9)))))) * math.sin(
+                math.radians(hdg)
+            )
             lat += dlat
             lon += dlon
             new.append((vid, lat, lon, mps, hdg))

@@ -25,10 +25,7 @@ def simulate_track(mmsi: str, lat: float, lon: float, knots: float, heading: flo
 
 def main():
     p = producer()
-    seeds = [
-        ("MMSI" + str(100000000 + i), 34.0 + i * 0.01, -119.0 - i * 0.01, 8.0, 270.0)
-        for i in range(5)
-    ]
+    seeds = [("MMSI" + str(100000000 + i), 34.0 + i * 0.01, -119.0 - i * 0.01, 8.0, 270.0) for i in range(5)]
     gens = [simulate_track(*s) for s in seeds]
     while True:
         for g in gens:
