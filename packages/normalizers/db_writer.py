@@ -104,5 +104,34 @@ class FusedWriter:
             )
 
 
+class ExplainedWriter:
+    def __init__(self, table: str = "anomalies_explained"):
+        self.table = table
+        self.stmt = text(
+            f"""
+            INSERT INTO {table} (ts, domain, entity_id, h3, type, score, summary, triage, model, prompt_hash)
+            VALUES (:ts, :domain, :entity_id, :h3, :type, :score, :summary, :triage, :model, :prompt_hash)
+            """
+        )
+
+    def write(self, explained: dict):
+        with engine.begin() as conn:
+            conn.execute(
+                self.stmt,
+                {
+                    "ts": explained["ts"],
+                    "domain": explained.get("domain"),
+                    "entity_id": explained.get("entity_id"),
+                    "h3": explained.get("h3"),
+                    "type": explained.get("type"),
+                    "score": explained.get("score"),
+                    "summary": explained.get("summary"),
+                    "triage": explained.get("triage"),
+                    "model": explained.get("model"),
+                    "prompt_hash": explained.get("prompt_hash"),
+                },
+            )
+
+
 def json_dumps(d):  # already a dict; return as-is for JSONB binding
     return d

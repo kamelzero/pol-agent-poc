@@ -45,6 +45,9 @@ def maritime_agent():
     buf: dict[str, deque] = defaultdict(lambda: deque(maxlen=600))  # ~10 min @ 1Hz
 
     writer = AnomaliesWriter("anomalies_domain")
+    # Track per-entity loiter state and active rendezvous pairs to emit only on state transitions
+    in_loiter: dict[str, bool] = {}
+    active_pairs: set[tuple[str, str]] = set()
 
     while True:
         msg = next(c)
@@ -55,7 +58,9 @@ def maritime_agent():
         if len(series) > 60:
             speeds = [e.speed or 0.0 for e in series]
             dur_min = len(series) / 60
-            if max(speeds) <= LOITER_SPEED_KTS and dur_min >= 10:
+            is_loiter = max(speeds) <= LOITER_SPEED_KTS and dur_min >= 10
+            prev = in_loiter.get(env.entity_id, False)
+            if is_loiter and not prev:
                 anomaly = DomainAnomaly(
                     ts=series[-1].ts,
                     domain="maritime",
@@ -68,6 +73,8 @@ def maritime_agent():
                 doc = anomaly.model_dump()
                 p.send(OUT_TOPIC, doc)
                 writer.write(doc)
+            # update state
+            in_loiter[env.entity_id] = is_loiter
 
         recent = {
             eid: list(q)
@@ -75,6 +82,7 @@ def maritime_agent():
             if q and (now_utc() - datetime.fromisoformat(q[-1].ts)).total_seconds() < WIN_SEC
         }
         last_points = [(eid, q[-1]) for eid, q in recent.items()]
+        new_active_pairs: set[tuple[str, str]] = set()
         for i in range(len(last_points)):
             for j in range(i + 1, len(last_points)):
                 ei, li = last_points[i]
@@ -82,18 +90,23 @@ def maritime_agent():
                 if (li.speed or 0) <= LOITER_SPEED_KTS and (lj.speed or 0) <= LOITER_SPEED_KTS:
                     d = haversine_m(li.lat, li.lon, lj.lat, lj.lon)
                     if d <= RENDEZ_RADIUS_M:
-                        anomaly = DomainAnomaly(
-                            ts=li.ts,
-                            domain="maritime",
-                            entity_id=f"{ei}|{ej}",
-                            h3=li.h3,
-                            type="rendezvous",
-                            score=0.8,
-                            evidence={"distance_m": int(d)},
-                        )
-                        doc = anomaly.model_dump()
-                        p.send(OUT_TOPIC, doc)
-                        writer.write(doc)
+                        key = tuple(sorted((ei, ej)))
+                        new_active_pairs.add(key)
+                        if key not in active_pairs:
+                            anomaly = DomainAnomaly(
+                                ts=li.ts,
+                                domain="maritime",
+                                entity_id=f"{ei}|{ej}",
+                                h3=li.h3,
+                                type="rendezvous",
+                                score=0.8,
+                                evidence={"distance_m": int(d)},
+                            )
+                            doc = anomaly.model_dump()
+                            p.send(OUT_TOPIC, doc)
+                            writer.write(doc)
+        # Only keep pairs that remain active to allow re-emitting on future re-entries
+        active_pairs = new_active_pairs
 
 
 if __name__ == "__main__":
