@@ -12,8 +12,7 @@ def test_openai_json_mode_smoke():
     model = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
     sys = (
-        "You are a concise triage assistant. Respond with strict JSON containing keys: "
-        "summary, triage, confidence."
+        "You are a concise triage assistant. Respond with strict JSON containing keys: " "summary, triage, confidence."
     )
     resp = client.chat.completions.create(
         model=model,
@@ -28,4 +27,3 @@ def test_openai_json_mode_smoke():
     content = resp.choices[0].message.content or "{}"
     data = json.loads(content)
     assert "summary" in data and "triage" in data
-
