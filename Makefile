@@ -1,4 +1,47 @@
-.PHONY: up db-init bridges norms agents ui
+.PHONY: up db-init bridges norms agents ui setup setup-system setup-venv install test
+
+# One-shot bootstrap: installs system deps (sudo), Python 3.11, Docker, venv, and project deps
+setup:
+	$(MAKE) setup-system
+	$(MAKE) setup-venv
+	@echo "\nSetup complete. Activate venv with: source .venv/bin/activate"
+	@echo "Then run: make check"
+
+# Installs system-level dependencies for Ubuntu 22.04
+setup-system:
+	@echo "[setup-system] Installing system dependencies (requires sudo)"
+	@command -v sudo >/dev/null 2>&1 || { echo "sudo is required. Run as root or install sudo."; exit 1; }
+	@sudo apt-get update -y
+	@sudo apt-get install -y software-properties-common curl make git ca-certificates gnupg lsb-release
+	@# Python 3.11 (Ubuntu 22.04 default is 3.10)
+	@sudo add-apt-repository -y ppa:deadsnakes/ppa
+	@sudo apt-get update -y
+	@sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
+	@# Docker Engine and Compose plugin (official Docker repo)
+	@sudo install -m 0755 -d /etc/apt/keyrings
+	@curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+	@sudo chmod a+r /etc/apt/keyrings/docker.gpg
+	@echo "deb [arch=$$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $$(. /etc/os-release && echo $$VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+	@sudo apt-get update -y
+	@sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+	@sudo usermod -aG docker $$(id -un) || true
+	@docker --version || true
+	@docker compose version || true
+	@echo "If Docker group was just added, open a new shell or run: newgrp docker"
+
+# Creates virtualenv and installs Python dependencies
+setup-venv:
+	@echo "[setup-venv] Creating Python 3.11 virtualenv and installing deps"
+	python3.11 -m venv .venv
+	. .venv/bin/activate && python -m pip install -U pip setuptools wheel
+	. .venv/bin/activate && pip install -r requirements.txt
+
+# Convenience targets
+install:
+	. .venv/bin/activate && pip install -r requirements.txt
+
+test:
+	. .venv/bin/activate && python -m pytest -q
 
 up:
 	docker compose up -d
@@ -8,9 +51,7 @@ db-init:
 	docker compose exec -T db psql -U postgres -d pol -v ON_ERROR_STOP=1 -f - < ops/sql/ddl.sql
 
 check:
-	ruff check .
-	black --check .
-	python -m pytest -q
+	. .venv/bin/activate && ruff check . && black --check . && python -m pytest -q
 
 bridges:
 	PYTHONPATH=packages python packages/bridges/ais_bridge.py &
