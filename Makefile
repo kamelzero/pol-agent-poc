@@ -1,4 +1,4 @@
-.PHONY: up db-init bridges norms agents ui setup setup-system setup-venv install test
+.PHONY: up db-init bridges norms agents ui setup setup-system setup-venv install test bluesky-install bluesky-git-clone bluesky-run bluesky-bridge
 
 # One-shot bootstrap: installs system deps (sudo), Python 3.11, Docker, venv, and project deps
 setup:
@@ -51,7 +51,7 @@ db-init:
 	docker compose exec -T db psql -U postgres -d pol -v ON_ERROR_STOP=1 -f - < ops/sql/ddl.sql
 
 check:
-	. .venv/bin/activate && ruff check . && black --check . && python -m pytest -q
+	. .venv/bin/activate && ruff check . --exclude external/ --exclude .venv/ && black --check . --extend-exclude 'external/|\.venv/' && python -m pytest -q --ignore=external/
 
 bridges:
 	PYTHONPATH=packages python packages/bridges/ais_bridge.py &
@@ -79,3 +79,22 @@ tail-agents:
 
 ui:
 	PYTHONPATH=packages streamlit run packages/ui/app.py
+
+# --- BlueSky (Air Traffic Simulator) ---
+# Install from PyPI into the venv
+bluesky-install:
+	. .venv/bin/activate && pip install "bluesky-simulator"
+
+# Clone upstream and install editable (alternative to PyPI install)
+bluesky-git-clone:
+	mkdir -p external && cd external && test -d bluesky || git clone https://github.com/TUDelft-CNS-ATM/bluesky.git
+	. .venv/bin/activate && pip install -e external/bluesky
+
+# Run BlueSky (pass extra args via BS_ARGS, e.g., BS_ARGS="--nogui")
+bluesky-run:
+	. .venv/bin/activate && python -m bluesky $(BS_ARGS)
+
+# Run our BlueSky→Kafka bridge
+bluesky-bridge:
+	. .venv/bin/activate && PYTHONPATH=packages BLUESKY_SCN=$(BLUESKY_SCN) BLUESKY_PUBLISH_HZ=$${BLUESKY_PUBLISH_HZ:-1.0} BLUESKY_DT_MULT=$${BLUESKY_DT_MULT:-1.0} python packages/bridges/bluesky_bridge.py
+

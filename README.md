@@ -85,6 +85,57 @@ docker compose exec kafka kafka-console-consumer \
 
 Note: host processes should use `localhost:29092`; containers use `kafka:9092`.
 
+## BlueSky integration (ADS-B via .scn)
+
+- Install BlueSky into the venv:
+
+```bash
+make bluesky-install
+```
+
+- Clone upstream to access bundled `.scn` examples (optional, for scenarios only):
+
+```bash
+make bluesky-git-clone
+# scenarios now under external/bluesky/scenario/*.scn
+```
+
+- Run BlueSky → Kafka bridge with a scenario:
+
+```bash
+make up && make db-init
+BLUESKY_SCN=/home/ubuntu/pol-agent-poc/external/bluesky/scenario/demo.scn \
+BLUESKY_PUBLISH_HZ=1 BLUESKY_DT_MULT=1.0 make bluesky-bridge
+```
+
+- Verify messages:
+
+```bash
+kcat -b localhost:29092 -t adsb.raw -C -o -5 -q
+```
+
+### Troubleshooting with kcat
+
+- Install on Ubuntu:
+
+```bash
+sudo apt-get update && sudo apt-get install -y kafkacat || sudo apt-get install -y kcat
+```
+
+- List metadata and peek messages:
+
+```bash
+kcat -b localhost:29092 -L
+kcat -b localhost:29092 -t adsb.raw -C -o -5 -q
+kcat -b localhost:29092 -t adsb.norm -C -o -5 -q
+kcat -b localhost:29092 -t pol.anomalies.domain -C -o -10 -q
+```
+
+- Common issues:
+- If no `adsb.raw` messages: ensure the bridge is running and `BLUESKY_SCN` points to a valid `.scn`.
+- If normalizers/agents not producing: run `make norms` and `make agents`.
+- If permissions error on Docker socket: add your user to `docker` group and re-login (`newgrp docker`).
+
 ## Database schema
 
 Tables are created by `ops/sql/ddl.sql` into TimescaleDB:
